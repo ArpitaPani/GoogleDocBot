@@ -3,6 +3,12 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 
+import os, json
+from google.oauth2 import service_account
+
+creds_dict = json.loads(os.environ["GOOGLE_CREDENTIALS"])
+creds = service_account.Credentials.from_service_account_info(creds_dict)
+
 # OAuth Scopes for Google Drive and Docs
 SCOPES = [
     'https://www.googleapis.com/auth/drive.readonly',
