@@ -11,14 +11,13 @@ st.set_page_config(page_title="RAG Google Docs Chatbot", layout="wide")
 st.title("RAG Chatbot — Google Docs Integration (OAuth)")
 
 if "rag" not in st.session_state:
-    st.session_state["rag"] = None
+    st.session_state["rag"] = RAG() 
 
-# Handle OAuth callback
+
 creds = credentials_from_session()
 if not creds:
     creds = exchange_code_for_credentials()
 
-# Two-column layout
 col1, col2 = st.columns([1, 3])
 
 with col1:
@@ -32,7 +31,6 @@ with col1:
     else:
         st.success("Authenticated ✅")
 
-        # List user docs
         st.markdown("---")
         st.header("Selected Docs")
         try:
@@ -56,11 +54,14 @@ with col1:
                             metas.append({"source": fid})
 
                     if docs_texts:
-                        rag = RAG()
+                        rag = st.session_state["rag"]
+
+                        # clearing old KB before adding new docs
+                        rag.clear()
                         rag.add_documents(docs_texts, metadatas=metas)
-                        st.session_state["rag"] = rag
+
                         st.success(
-                            f"Added {len(docs_texts)} chunks. "
+                            f"KB reset and added {len(docs_texts)} chunks. "
                             f"KB size: {rag.vectordb._collection.count()}"
                         )
                     else:
@@ -71,12 +72,8 @@ with col1:
 with col2:
     st.header("Chat")
 
-    if st.button("(Re)Initialize RAG"):
-        st.session_state["rag"] = RAG()
-        st.success("RAG initialized")
-
     if st.session_state.get("rag") is None:
-        st.info("Initialize RAG or add docs first")
+        st.info("Please add docs first")
     else:
         query = st.text_input("Ask a question about your documents")
         if st.button("Ask") and query.strip():

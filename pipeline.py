@@ -1,4 +1,5 @@
 import os
+import shutil
 from dotenv import load_dotenv
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain.schema import HumanMessage
@@ -35,12 +36,22 @@ class RAG:
                 embedding_function=self.embeddings
             )
         except Exception:
-            # initialize empty vectorstore
             self.vectordb = Chroma.from_texts(
                 [],
                 embedding=self.embeddings,
                 persist_directory=self.persist_directory
             )
+
+    def clear(self):
+        """Clear the vector store by deleting the persisted directory."""
+        if os.path.exists(self.persist_directory):
+            shutil.rmtree(self.persist_directory)
+        os.makedirs(self.persist_directory, exist_ok=True)
+        self.vectordb = Chroma.from_texts(
+            [],
+            embedding=self.embeddings,
+            persist_directory=self.persist_directory
+        )
 
     def add_documents(self, docs: list, metadatas: list = None):
         """Add documents to the vector store."""
