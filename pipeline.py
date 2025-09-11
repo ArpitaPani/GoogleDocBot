@@ -2,11 +2,11 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.chat_models import ChatOpenAI
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain.schema import HumanMessage
-from langchain.vectorstores import Chroma
+from langchain_community.vectorstores import Chroma
 from langchain.docstore.document import Document
+
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 CHROMA_DIR = os.environ.get("CHROMA_DB_DIR", "./storage/chromadb")
