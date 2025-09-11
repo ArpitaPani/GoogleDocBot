@@ -7,8 +7,9 @@ tqdm
 google-auth
 google-auth-oauthlib
 google-api-python-client
+google-auth-httplib2 
 
-# LangChain ecosystem (pinned for stability)
+# LangChain ecosystem
 langchain==0.3.0
 langchain-community==0.3.0
 langchain-openai==0.3.0
@@ -16,5 +17,5 @@ langchain-openai==0.3.0
 # Vector store
 chromadb
 
-# OpenAI SDK
+# OpenAI 
 openai

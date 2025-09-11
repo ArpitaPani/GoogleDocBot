@@ -1,14 +1,16 @@
 import os
 from dotenv import load_dotenv
-load_dotenv()
-
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain.schema import HumanMessage
 from langchain_community.vectorstores import Chroma
 from langchain.docstore.document import Document
 
+load_dotenv()
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
+    raise ValueError("❌ Missing OPENAI_API_KEY in environment variables.")
+
 CHROMA_DIR = os.environ.get("CHROMA_DB_DIR", "./storage/chromadb")
 
 
@@ -26,12 +28,14 @@ class RAG:
         os.makedirs(self.persist_directory, exist_ok=True)
         self.embeddings = _get_embeddings()
         self.llm = _get_llm()
+
         try:
             self.vectordb = Chroma(
                 persist_directory=self.persist_directory,
                 embedding_function=self.embeddings
             )
         except Exception:
+            # initialize empty vectorstore
             self.vectordb = Chroma.from_texts(
                 [],
                 embedding=self.embeddings,
@@ -69,7 +73,7 @@ class RAG:
                 f"Answer from general knowledge.\n\nQUESTION: {query}"
             )
 
-        res = self.llm([HumanMessage(content=prompt)])
+        res = self.llm.invoke([HumanMessage(content=prompt)])
         return {
             "answer": res.content if hasattr(res, "content") else str(res),
             "from_docs": found,
