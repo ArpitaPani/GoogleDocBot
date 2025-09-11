@@ -50,8 +50,10 @@ with col1:
                         st.write(f"Fetched {len(txt)} characters from {fid}")
                         chunks = chunk_text(txt, max_chars=1000)
                         for c in chunks:
-                            docs_texts.append(c)
-                            metas.append({"source": fid})
+                            if c.strip():   
+                                docs_texts.append(c)
+                                metas.append({"source": fid})
+
 
                     if docs_texts:
                         rag = st.session_state["rag"]

@@ -90,3 +90,15 @@ class RAG:
             "from_docs": found,
             "source_docs": [{"metadata": d.metadata} for d in docs]
         }
+    
+    def add_documents(self, docs: list, metadatas: list = None):
+        """Add documents to the vector store."""
+        entries = [
+            Document(page_content=docs[i], metadata=metadatas[i] if metadatas else {})
+            for i in range(len(docs)) if docs[i].strip()
+        ]
+        if not entries:
+            raise ValueError("No valid (non-empty) documents to add to KB.")
+        self.vectordb.add_documents(entries)
+        self.vectordb.persist()
+
