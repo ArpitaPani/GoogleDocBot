@@ -1,104 +1,94 @@
 import os
-import shutil
+import numpy as np
 from dotenv import load_dotenv
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_community.chat_models import ChatOpenAI
 from langchain.schema import HumanMessage
-from langchain_community.vectorstores import Chroma
 from langchain.docstore.document import Document
 
 load_dotenv()
-
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-if not OPENAI_API_KEY:
-    raise ValueError("❌ Missing OPENAI_API_KEY in environment variables.")
-
-CHROMA_DIR = os.environ.get("CHROMA_DB_DIR", "./storage/chromadb")
 
 
 def _get_embeddings():
+    if not OPENAI_API_KEY:
+        raise ValueError("❌ Missing OPENAI_API_KEY in .env.")
     return OpenAIEmbeddings()
 
 
 def _get_llm():
+    if not OPENAI_API_KEY:
+        raise ValueError("❌ Missing OPENAI_API_KEY in .env.")
     return ChatOpenAI(temperature=0, model="gpt-4o")
 
 
 class RAG:
-    def __init__(self, persist_directory=CHROMA_DIR):
-        self.persist_directory = persist_directory
-        os.makedirs(self.persist_directory, exist_ok=True)
+    def __init__(self):
+        """Initialize RAG pipeline with in-memory embeddings (no Chroma)."""
         self.embeddings = _get_embeddings()
         self.llm = _get_llm()
-
-        try:
-            self.vectordb = Chroma(
-                persist_directory=self.persist_directory,
-                embedding_function=self.embeddings
-            )
-        except Exception:
-            self.vectordb = Chroma.from_texts(
-                [],
-                embedding=self.embeddings,
-                persist_directory=self.persist_directory
-            )
-
-    def clear(self):
-        """Clear the vector store by deleting the persisted directory."""
-        if os.path.exists(self.persist_directory):
-            shutil.rmtree(self.persist_directory)
-        os.makedirs(self.persist_directory, exist_ok=True)
-        self.vectordb = Chroma.from_texts(
-            [],
-            embedding=self.embeddings,
-            persist_directory=self.persist_directory
-        )
+        self.docs = []         # List[Document]
+        self.vectors = None    # np.ndarray of embeddings
+        print("✅ Initialized RAG (in-memory store)")
 
     def add_documents(self, docs: list, metadatas: list = None):
-        """Add documents to the vector store."""
-        entries = [
-            Document(page_content=docs[i], metadata=metadatas[i] if metadatas else {})
-            for i in range(len(docs))
-        ]
-        self.vectordb.add_documents(entries)
-        self.vectordb.persist()
+        """Embed and add documents in memory."""
+        valid_entries = []
+        for i, d in enumerate(docs):
+            if d and d.strip():
+                valid_entries.append(
+                    Document(
+                        page_content=d.strip(),
+                        metadata=metadatas[i] if metadatas else {}
+                    )
+                )
+
+        if not valid_entries:
+            print("⚠️ No valid documents to embed. Skipping add_documents.")
+            return
+
+        texts = [d.page_content for d in valid_entries]
+        new_vectors = self.embeddings.embed_documents(texts)
+        new_vectors = np.array(new_vectors)
+
+        if self.vectors is None:
+            self.vectors = new_vectors
+            self.docs = valid_entries
+        else:
+            self.vectors = np.vstack([self.vectors, new_vectors])
+            self.docs.extend(valid_entries)
+
+        print(f"✅ Added {len(valid_entries)} docs to in-memory store.")
 
     def retrieve(self, query, k=4):
-        retriever = self.vectordb.as_retriever(
-            search_type="similarity", search_kwargs={"k": k}
+        """Retrieve top-k similar documents using cosine similarity."""
+        if self.vectors is None or not self.docs:
+            return []
+
+        query_vec = np.array(self.embeddings.embed_query(query))
+        scores = np.dot(self.vectors, query_vec) / (
+            np.linalg.norm(self.vectors, axis=1) * np.linalg.norm(query_vec)
         )
-        return retriever.get_relevant_documents(query)
+
+        top_indices = np.argsort(scores)[::-1][:k]
+        return [self.docs[i] for i in top_indices]
 
     def answer(self, query, k=4):
         docs = self.retrieve(query, k=k)
         found = len(docs) > 0 and any(d.page_content.strip() for d in docs)
         context = "\n\n---\n\n".join([d.page_content for d in docs]) if found else ""
 
-        if found:
-            prompt = (
-                f"You are a helpful assistant. Use the following DOCUMENTS to answer.\n\n"
-                f"DOCUMENTS:\n{context}\n\nQUESTION: {query}"
-            )
-        else:
-            prompt = (
-                f"I couldn't find relevant information in the user's documents. "
-                f"Answer from general knowledge.\n\nQUESTION: {query}"
-            )
+        prompt = (
+            f"You are a helpful assistant. Use the following DOCUMENTS to answer.\n\n"
+            f"DOCUMENTS:\n{context}\n\nQUESTION: {query}"
+        ) if found else (
+            f"I couldn't find relevant information in the user's documents. "
+            f"Answer from general knowledge.\n\nQUESTION: {query}"
+        )
 
-        res = self.llm.invoke([HumanMessage(content=prompt)])
+        res = self.llm([HumanMessage(content=prompt)])
         return {
             "answer": res.content if hasattr(res, "content") else str(res),
             "from_docs": found,
             "source_docs": [{"metadata": d.metadata} for d in docs]
         }
-    
-    def add_documents(self, docs: list, metadatas: list = None):
-        """Add documents to the vector store."""
-        entries = [
-            Document(page_content=docs[i], metadata=metadatas[i] if metadatas else {})
-            for i in range(len(docs)) if docs[i].strip()
-        ]
-        if not entries:
-            raise ValueError("No valid (non-empty) documents to add to KB.")
-        self.vectordb.add_documents(entries)
-        self.vectordb.persist()
-
