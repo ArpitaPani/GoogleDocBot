@@ -1,11 +1,10 @@
-# auth.py
 import os
 import json
 import streamlit as st
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 
-# Add the scopes your app needs; include userinfo/email if you want to identify the user
+# OAuth scopes
 SCOPES = [
     "openid",
     "https://www.googleapis.com/auth/userinfo.email",
@@ -18,14 +17,16 @@ def _client_config():
     client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
     redirect_uri = os.getenv("GOOGLE_REDIRECT_URI")
     if not client_id or not client_secret or not redirect_uri:
-        raise RuntimeError("Missing GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_REDIRECT_URI env vars")
+        raise RuntimeError(
+            "Missing GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_REDIRECT_URI env vars"
+        )
     return {
         "web": {
             "client_id": client_id,
             "client_secret": client_secret,
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
             "token_uri": "https://oauth2.googleapis.com/token",
-            "redirect_uris": [redirect_uri]
+            "redirect_uris": [redirect_uri],
         }
     }
 
@@ -36,36 +37,27 @@ def _make_flow():
     return flow
 
 def start_auth_link():
-    """
-    Returns the URL to send the user to for Google sign-in.
-    Save the state in session_state.
-    """
     flow = _make_flow()
     auth_url, state = flow.authorization_url(
-        access_type="offline",        # request refresh token
+        access_type="offline",
         include_granted_scopes="true",
-        prompt="consent"             # force consent to ensure refresh_token is returned
+        prompt="consent",
     )
     st.session_state["oauth_state"] = state
     return auth_url
 
 def exchange_code_for_credentials():
-    """
-    Call this when the redirect returns with ?code=...
-    Exchanges the code for credentials, stores in session_state, returns Credentials or None.
-    """
-    query_params = st.experimental_get_query_params()
+    """Exchanges ?code=... in URL for credentials, stores in session_state."""
+    query_params = st.query_params  # ✅ new API
     if "code" not in query_params:
         return None
 
-    code = query_params["code"][0]
-    # Build a fresh flow and fetch the token using the code
+    code = query_params["code"][0] if isinstance(query_params["code"], list) else query_params["code"]
+
     flow = _make_flow()
-    # This will exchange the code for tokens (access + refresh)
     flow.fetch_token(code=code)
     creds = flow.credentials
 
-    # Save minimal credential info in session for later restoration
     st.session_state["google_creds"] = {
         "token": creds.token,
         "refresh_token": creds.refresh_token,
@@ -76,13 +68,11 @@ def exchange_code_for_credentials():
     }
 
     # remove query params from URL so code doesn't stay visible
-    st.experimental_set_query_params()
+    st.query_params.clear()
+
     return creds
 
 def credentials_from_session():
-    """
-    Recreate google.oauth2.credentials.Credentials from session_state (if present)
-    """
     data = st.session_state.get("google_creds")
     if not data:
         return None
@@ -92,5 +82,5 @@ def credentials_from_session():
         token_uri=data.get("token_uri"),
         client_id=data.get("client_id"),
         client_secret=data.get("client_secret"),
-        scopes=data.get("scopes")
+        scopes=data.get("scopes"),
     )

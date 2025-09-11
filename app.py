@@ -10,11 +10,10 @@ load_dotenv()
 st.set_page_config(page_title="RAG Google Docs Chatbot", layout="wide")
 st.title("RAG Chatbot — Google Docs Integration (OAuth)")
 
-# Initialize session state
 if "rag" not in st.session_state:
     st.session_state["rag"] = None
 
-# Try to exchange ?code=... from Google redirect
+# Handle OAuth callback
 creds = credentials_from_session()
 if not creds:
     creds = exchange_code_for_credentials()
@@ -87,10 +86,7 @@ with col2:
             if res["from_docs"]:
                 st.success("Answer (from your documents):")
             else:
-                st.warning(
-                    "Answer not found in documents. "
-                    "This is from general knowledge."
-                )
+                st.warning("Answer not found in documents. This is from general knowledge.")
             st.write(res["answer"])
 
 st.markdown("---")

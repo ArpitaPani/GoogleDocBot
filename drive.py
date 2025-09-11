@@ -7,10 +7,7 @@ SCOPES = [
 ]
 
 def list_google_docs(creds: Credentials):
-    """
-    Return a list of Google Docs (id, name) from Drive.
-    Uses credentials passed in from OAuth flow.
-    """
+    """Return a list of Google Docs (id, name) from Drive."""
     service = build("drive", "v3", credentials=creds, cache_discovery=False)
     results = service.files().list(
         q="mimeType='application/vnd.google-apps.document' and trashed=false",
@@ -19,12 +16,8 @@ def list_google_docs(creds: Credentials):
     ).execute()
     return results.get("files", [])
 
-
 def get_doc_content(file_id: str, creds: Credentials):
-    """
-    Fetch text content of a Google Doc using Docs API.
-    Uses credentials passed in from OAuth flow.
-    """
+    """Fetch text content of a Google Doc using Docs API."""
     docs_service = build("docs", "v1", credentials=creds, cache_discovery=False)
     doc = docs_service.documents().get(documentId=file_id).execute()
 
