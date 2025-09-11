@@ -8,4 +8,5 @@ chromadb
 python-dotenv
 tqdm
 langchain-openai
+langchain-community
 
