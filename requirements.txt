@@ -1,12 +1,20 @@
+# Core UI
 streamlit
+python-dotenv
+tqdm
+
+# Google Auth & API
 google-auth
 google-auth-oauthlib
 google-api-python-client
-langchain
-openai
-chromadb
-python-dotenv
-tqdm
-langchain-openai
-langchain-community
 
+# LangChain ecosystem (pinned for stability)
+langchain==0.3.0
+langchain-community==0.3.0
+langchain-openai==0.3.0
+
+# Vector store
+chromadb
+
+# OpenAI SDK
+openai
