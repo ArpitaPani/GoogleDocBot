@@ -17,7 +17,7 @@ A **Streamlit app** that lets you authenticate with Google, select your Google D
 ### 1. Clone this repo
 
 ```bash
-git clone https://github.com/yourusername/googledocbot.git
+git clone https://github.com/ArpitaPani/googledocbot.git
 cd googledocbot
 ```
 
@@ -135,3 +135,4 @@ Go to [http://localhost:8501](http://localhost:8501).
 ---
 
 👉 Through this project, I not only built a working RAG chatbot but also gained deep hands-on experience with integrating OAuth2 authentication, working with Google APIs, and deploying full-stack applications. I polished my understanding of retrieval-augmented generation (RAG) pipelines, vector databases, and embeddings. More importantly, I learned how to take an idea from scratch, connect multiple moving parts, and make it production-ready. This journey has been a huge step forward in my growth as a developer — and I hope it inspires others to dive into building impactful AI-powered applications too.
+
